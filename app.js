@@ -392,6 +392,10 @@ function setupEventListeners() {
     // Confidence filter
     document.getElementById('confidence-filter').addEventListener('change', filterByConfidence);
     
+    // Chatbot toggle
+    document.getElementById('chatbot-toggle').addEventListener('click', toggleChatbot);
+    document.getElementById('chatbot-close').addEventListener('click', toggleChatbot);
+    
     // Search functionality
     document.getElementById('search').addEventListener('input', handleSearch);
     
@@ -1104,4 +1108,22 @@ function setFlashcardConfidence(confidenceBtn) {
     updateSpacedRepetitionData(currentQuestion.id, 'confidence', level);
     
     saveProgress();
+}
+
+// Toggle chatbot visibility
+function toggleChatbot() {
+    const chatbotContainer = document.getElementById('chatbot-container');
+    const chatbotOverlay = document.getElementById('chatbot-overlay');
+    
+    chatbotContainer.classList.toggle('active');
+    chatbotOverlay.classList.toggle('active');
+    
+    // Add event listener to close when clicking outside
+    if (chatbotOverlay.classList.contains('active')) {
+        chatbotOverlay.addEventListener('click', function(e) {
+            if (e.target === chatbotOverlay) {
+                toggleChatbot();
+            }
+        });
+    }
 }
