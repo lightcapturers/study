@@ -409,12 +409,20 @@ function setupEventListeners() {
     });
 }
 
-// Toggle answer visibility
+// Toggle individual answer
 function toggleAnswer(questionElement) {
     questionElement.classList.toggle('active');
-    questionElement.setAttribute('aria-expanded', questionElement.classList.contains('active'));
-    const answer = questionElement.nextElementSibling.nextElementSibling;
-    answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
+    const isExpanded = questionElement.classList.contains('active');
+    questionElement.setAttribute('aria-expanded', isExpanded);
+    
+    const card = questionElement.closest('.question-card');
+    const answer = card.querySelector('.answer');
+    
+    if (isExpanded) {
+        answer.style.display = 'block';
+    } else {
+        answer.style.display = 'none';
+    }
 }
 
 // Toggle mastered status
@@ -612,32 +620,67 @@ function toggleMasteredQuestions() {
     btn.textContent = isHidingMastered ? 'Show Mastered' : 'Hide Mastered';
 }
 
-// Collapse all sections and subsections
+// Variable to track if all sections are collapsed
+let allSectionsCollapsed = false;
+
+// Toggle collapse/expand all sections and subsections
 function collapseAll() {
-    // First, collapse all questions
-    document.querySelectorAll('.question.active').forEach(question => {
-        question.classList.remove('active');
-        question.setAttribute('aria-expanded', 'false');
-        question.nextElementSibling.nextElementSibling.style.display = 'none';
-    });
+    const collapseBtn = document.getElementById('collapse-all');
     
-    // Then collapse all subsections
-    document.querySelectorAll('.subsection-title').forEach(title => {
-        const subsection = title.closest('.subsection');
-        const content = subsection.querySelector('.subsection-content');
-        title.classList.add('collapsed');
-        title.setAttribute('aria-expanded', 'false');
-        content.style.display = 'none';
-    });
+    if (!allSectionsCollapsed) {
+        // First, collapse all questions
+        document.querySelectorAll('.question.active').forEach(question => {
+            question.classList.remove('active');
+            question.setAttribute('aria-expanded', 'false');
+            const answer = question.closest('.question-card').querySelector('.answer');
+            if (answer) answer.style.display = 'none';
+        });
+        
+        // Then collapse all subsections
+        document.querySelectorAll('.subsection-title').forEach(title => {
+            const subsection = title.closest('.subsection');
+            const content = subsection.querySelector('.subsection-content');
+            title.classList.add('collapsed');
+            title.setAttribute('aria-expanded', 'false');
+            if (content) content.style.display = 'none';
+        });
+        
+        // Finally collapse all sections
+        document.querySelectorAll('.section-title').forEach(title => {
+            const section = title.closest('.section');
+            const content = section.querySelector('.section-content');
+            title.classList.add('collapsed');
+            title.setAttribute('aria-expanded', 'false');
+            if (content) content.style.display = 'none';
+        });
+        
+        // Update button text
+        collapseBtn.textContent = 'Expand All';
+    } else {
+        // First, expand all sections
+        document.querySelectorAll('.section-title').forEach(title => {
+            const section = title.closest('.section');
+            const content = section.querySelector('.section-content');
+            title.classList.remove('collapsed');
+            title.setAttribute('aria-expanded', 'true');
+            if (content) content.style.display = 'block';
+        });
+        
+        // Then expand all subsections
+        document.querySelectorAll('.subsection-title').forEach(title => {
+            const subsection = title.closest('.subsection');
+            const content = subsection.querySelector('.subsection-content');
+            title.classList.remove('collapsed');
+            title.setAttribute('aria-expanded', 'true');
+            if (content) content.style.display = 'block';
+        });
+        
+        // Update button text
+        collapseBtn.textContent = 'Collapse All';
+    }
     
-    // Finally collapse all sections
-    document.querySelectorAll('.section-title').forEach(title => {
-        const section = title.closest('.section');
-        const content = section.querySelector('.section-content');
-        title.classList.add('collapsed');
-        title.setAttribute('aria-expanded', 'false');
-        content.style.display = 'none';
-    });
+    // Toggle state
+    allSectionsCollapsed = !allSectionsCollapsed;
 }
 
 // Handle search
