@@ -72,9 +72,21 @@ function renderContent() {
         sectionElement.className = 'section';
         sectionElement.id = section.id;
         
+        const sectionHeader = document.createElement('div');
+        sectionHeader.className = 'section-header';
+        
         const sectionTitle = document.createElement('h2');
         sectionTitle.className = 'section-title';
         sectionTitle.textContent = section.title;
+        sectionTitle.setAttribute('role', 'button');
+        sectionTitle.setAttribute('aria-expanded', 'true');
+        sectionTitle.setAttribute('tabindex', '0');
+        
+        // Add toggle icon
+        const toggleIcon = document.createElement('span');
+        toggleIcon.className = 'toggle-icon';
+        toggleIcon.innerHTML = '▼';
+        sectionTitle.appendChild(toggleIcon);
         
         // Add progress bar to section
         const progressContainer = document.createElement('div');
@@ -87,18 +99,42 @@ function renderContent() {
         progressContainer.appendChild(progressBar);
         sectionTitle.appendChild(progressContainer);
         
-        sectionElement.appendChild(sectionTitle);
+        sectionHeader.appendChild(sectionTitle);
+        sectionElement.appendChild(sectionHeader);
+        
+        // Create content container for section (for toggling)
+        const sectionContent = document.createElement('div');
+        sectionContent.className = 'section-content';
+        sectionElement.appendChild(sectionContent);
         
         section.subsections.forEach(subsection => {
             const subsectionElement = document.createElement('div');
             subsectionElement.className = 'subsection';
             subsectionElement.id = subsection.id;
             
+            const subsectionHeader = document.createElement('div');
+            subsectionHeader.className = 'subsection-header';
+            
             const subsectionTitle = document.createElement('h3');
             subsectionTitle.className = 'subsection-title';
             subsectionTitle.textContent = subsection.title;
+            subsectionTitle.setAttribute('role', 'button');
+            subsectionTitle.setAttribute('aria-expanded', 'true');
+            subsectionTitle.setAttribute('tabindex', '0');
             
-            subsectionElement.appendChild(subsectionTitle);
+            // Add toggle icon
+            const toggleIcon = document.createElement('span');
+            toggleIcon.className = 'toggle-icon';
+            toggleIcon.innerHTML = '▼';
+            subsectionTitle.appendChild(toggleIcon);
+            
+            subsectionHeader.appendChild(subsectionTitle);
+            subsectionElement.appendChild(subsectionHeader);
+            
+            // Create content container for subsection (for toggling)
+            const subsectionContent = document.createElement('div');
+            subsectionContent.className = 'subsection-content';
+            subsectionElement.appendChild(subsectionContent);
             
             subsection.questions.forEach(question => {
                 const questionCard = document.createElement('div');
@@ -157,10 +193,10 @@ function renderContent() {
                 questionCard.appendChild(progressMarker);
                 questionCard.appendChild(answerElement);
                 
-                subsectionElement.appendChild(questionCard);
+                subsectionContent.appendChild(questionCard);
             });
             
-            sectionElement.appendChild(subsectionElement);
+            sectionContent.appendChild(subsectionElement);
         });
         
         contentElement.appendChild(sectionElement);
@@ -184,11 +220,58 @@ function setupEventListeners() {
         }
     });
     
+    // Toggle sections
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('section-title') || 
+            (e.target.parentElement && e.target.parentElement.classList.contains('section-title'))) {
+            const sectionTitle = e.target.classList.contains('section-title') ? e.target : e.target.parentElement;
+            const section = sectionTitle.closest('.section');
+            const sectionContent = section.querySelector('.section-content');
+            
+            sectionTitle.classList.toggle('collapsed');
+            sectionTitle.setAttribute('aria-expanded', !sectionTitle.classList.contains('collapsed'));
+            
+            // Toggle content display
+            if (sectionTitle.classList.contains('collapsed')) {
+                sectionContent.style.display = 'none';
+            } else {
+                sectionContent.style.display = 'block';
+            }
+        }
+    });
+    
+    // Toggle subsections
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('subsection-title') || 
+            (e.target.parentElement && e.target.parentElement.classList.contains('subsection-title'))) {
+            const subsectionTitle = e.target.classList.contains('subsection-title') ? e.target : e.target.parentElement;
+            const subsection = subsectionTitle.closest('.subsection');
+            const subsectionContent = subsection.querySelector('.subsection-content');
+            
+            subsectionTitle.classList.toggle('collapsed');
+            subsectionTitle.setAttribute('aria-expanded', !subsectionTitle.classList.contains('collapsed'));
+            
+            // Toggle content display
+            if (subsectionTitle.classList.contains('collapsed')) {
+                subsectionContent.style.display = 'none';
+            } else {
+                subsectionContent.style.display = 'block';
+            }
+        }
+    });
+    
     // Keyboard support for toggling answers
     document.addEventListener('keydown', function(e) {
         if (e.target.classList.contains('question') && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
             toggleAnswer(e.target);
+        }
+        
+        // Keyboard support for section/subsection toggling
+        if ((e.target.classList.contains('section-title') || e.target.classList.contains('subsection-title')) && 
+            (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            e.target.click();
         }
     });
     
@@ -457,12 +540,31 @@ function toggleMasteredQuestions() {
     btn.textContent = isHidingMastered ? 'Show Mastered' : 'Hide Mastered';
 }
 
-// Collapse all sections
+// Collapse all sections and subsections
 function collapseAll() {
+    // First, collapse all questions
     document.querySelectorAll('.question.active').forEach(question => {
         question.classList.remove('active');
         question.setAttribute('aria-expanded', 'false');
         question.nextElementSibling.nextElementSibling.style.display = 'none';
+    });
+    
+    // Then collapse all subsections
+    document.querySelectorAll('.subsection-title').forEach(title => {
+        const subsection = title.closest('.subsection');
+        const content = subsection.querySelector('.subsection-content');
+        title.classList.add('collapsed');
+        title.setAttribute('aria-expanded', 'false');
+        content.style.display = 'none';
+    });
+    
+    // Finally collapse all sections
+    document.querySelectorAll('.section-title').forEach(title => {
+        const section = title.closest('.section');
+        const content = section.querySelector('.section-content');
+        title.classList.add('collapsed');
+        title.setAttribute('aria-expanded', 'false');
+        content.style.display = 'none';
     });
 }
 
