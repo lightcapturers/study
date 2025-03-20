@@ -19,6 +19,19 @@
             <input type="text" class="search-input" id="search" placeholder="Search questions..." aria-label="Search questions">
         </div>
         
+        <div class="filter-container">
+            <label for="confidence-filter">Filter by confidence:</label>
+            <select id="confidence-filter" class="filter-select">
+                <option value="all">All levels</option>
+                <option value="0">Not rated</option>
+                <option value="1">Level 1</option>
+                <option value="2">Level 2</option>
+                <option value="3">Level 3</option>
+                <option value="4">Level 4</option>
+                <option value="5">Level 5</option>
+            </select>
+        </div>
+        
         <nav>
             <ul class="nav-list" id="nav-list">
                 <!-- Navigation items will be inserted here by JavaScript -->
@@ -72,6 +85,10 @@
                         <button class="confidence-btn" data-level="3">3</button>
                         <button class="confidence-btn" data-level="4">4</button>
                         <button class="confidence-btn" data-level="5">5</button>
+                    </div>
+                    <div class="flashcard-progress">
+                        <span>Mark as mastered: </span>
+                        <button class="progress-btn" id="flashcard-mastered" aria-label="Mark as mastered">✓</button>
                     </div>
                 </div>
             </div>

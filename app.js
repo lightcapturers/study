@@ -42,7 +42,52 @@ function buildNavigation() {
                 subLink.className = 'nav-link';
                 subLink.textContent = subsection.title;
                 
-                subItem.appendChild(subLink);
+                // Add questions list for each subsection
+                const questionsList = document.createElement('ul');
+                questionsList.className = 'question-nav-list';
+                
+                subsection.questions.forEach(question => {
+                    const questionItem = document.createElement('li');
+                    questionItem.className = 'question-nav-item';
+                    questionItem.dataset.id = question.id;
+                    
+                    const questionLink = document.createElement('a');
+                    questionLink.href = `#question-${question.id}`;
+                    questionLink.className = 'question-nav-link';
+                    questionLink.textContent = question.question.substring(0, 60) + (question.question.length > 60 ? '...' : '');
+                    
+                    questionItem.appendChild(questionLink);
+                    
+                    // Add click event listener to scroll to question
+                    questionLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const targetQuestion = document.getElementById(`question-${question.id}`);
+                        if (targetQuestion) {
+                            targetQuestion.scrollIntoView({ behavior: 'smooth' });
+                            // Highlight the question briefly
+                            targetQuestion.classList.add('highlight');
+                            setTimeout(() => {
+                                targetQuestion.classList.remove('highlight');
+                            }, 2000);
+                        }
+                    });
+                    
+                    questionsList.appendChild(questionItem);
+                });
+                
+                subItem.appendChild(questionsList);
+                
+                // Make subsection link toggle questions visibility
+                subLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    subItem.classList.toggle('expanded');
+                    const subsectionElement = document.getElementById(subsection.id);
+                    if (subsectionElement) {
+                        subsectionElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+                
                 subnavList.appendChild(subItem);
             });
             
@@ -140,6 +185,7 @@ function renderContent() {
                 const questionCard = document.createElement('div');
                 questionCard.className = 'question-card';
                 questionCard.dataset.id = question.id;
+                questionCard.id = `question-${question.id}`;
                 
                 const questionElement = document.createElement('div');
                 questionElement.className = 'question';
@@ -331,6 +377,21 @@ function setupEventListeners() {
     document.getElementById('flashcard-prev').addEventListener('click', prevFlashcard);
     document.getElementById('flashcard-close').addEventListener('click', exitFlashcardMode);
     
+    // Flashcard progress marker
+    document.getElementById('flashcard-mastered').addEventListener('click', function() {
+        toggleFlashcardMastered(this);
+    });
+    
+    // Flashcard confidence buttons
+    document.querySelectorAll('#flashcard-confidence .confidence-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            setFlashcardConfidence(this);
+        });
+    });
+    
+    // Confidence filter
+    document.getElementById('confidence-filter').addEventListener('change', filterByConfidence);
+    
     // Search functionality
     document.getElementById('search').addEventListener('input', handleSearch);
     
@@ -495,6 +556,17 @@ function loadProgress() {
                     if (confidenceBtn) {
                         confidenceBtn.classList.add('selected');
                     }
+                }
+            }
+            
+            // Apply to navigation items
+            const navItem = document.querySelector(`.question-nav-item[data-id="${questionId}"]`);
+            if (navItem) {
+                if (data.mastered) {
+                    navItem.classList.add('mastered');
+                }
+                if (data.confidence) {
+                    navItem.classList.add(`confidence-${data.confidence}`);
                 }
             }
         }
@@ -812,6 +884,15 @@ function loadCurrentFlashcard() {
         const level = window.userQuestionData[currentQuestion.id].confidence;
         document.querySelector(`#flashcard-confidence .confidence-btn[data-level="${level}"]`).classList.add('selected');
     }
+    
+    // Set mastered status
+    const masteredBtn = document.getElementById('flashcard-mastered');
+    masteredBtn.classList.remove('mastered');
+    if (window.userQuestionData && 
+        window.userQuestionData[currentQuestion.id] && 
+        window.userQuestionData[currentQuestion.id].mastered) {
+        masteredBtn.classList.add('mastered');
+    }
 }
 
 // Helper functions
@@ -851,4 +932,133 @@ function getQuestionsData(questionIds) {
     });
     
     return questions;
+}
+
+// Toggle flashcard mastered status
+function toggleFlashcardMastered(btn) {
+    btn.classList.toggle('mastered');
+    const currentQuestion = flashcardQuestions[currentFlashcardIndex];
+    updateQuestionData(currentQuestion.id, 'mastered', btn.classList.contains('mastered'));
+    
+    // Update navigation item
+    const navItem = document.querySelector(`.question-nav-item[data-id="${currentQuestion.id}"]`);
+    if (navItem) {
+        if (btn.classList.contains('mastered')) {
+            navItem.classList.add('mastered');
+        } else {
+            navItem.classList.remove('mastered');
+        }
+    }
+    
+    // Update section progress
+    updateSectionProgress();
+    saveProgress();
+}
+
+// Filter questions by confidence level
+function filterByConfidence() {
+    const confidenceLevel = document.getElementById('confidence-filter').value;
+    const questions = document.querySelectorAll('.question-card');
+    
+    if (confidenceLevel === 'all') {
+        questions.forEach(question => {
+            question.style.display = '';
+        });
+        return;
+    }
+    
+    questions.forEach(question => {
+        const questionId = question.dataset.id;
+        const hasData = window.userQuestionData && window.userQuestionData[questionId];
+        
+        if (confidenceLevel === '0') {
+            // Show questions with no confidence rating
+            if (!hasData || !window.userQuestionData[questionId].confidence) {
+                question.style.display = '';
+            } else {
+                question.style.display = 'none';
+            }
+        } else {
+            // Show questions with specific confidence rating
+            if (hasData && window.userQuestionData[questionId].confidence === parseInt(confidenceLevel)) {
+                question.style.display = '';
+            } else {
+                question.style.display = 'none';
+            }
+        }
+    });
+    
+    // Also update navigation items
+    updateNavigationDisplayByConfidence(confidenceLevel);
+}
+
+// Update navigation items display based on confidence
+function updateNavigationDisplayByConfidence(confidenceLevel) {
+    const navItems = document.querySelectorAll('.question-nav-item');
+    
+    if (confidenceLevel === 'all') {
+        navItems.forEach(item => {
+            item.style.display = '';
+        });
+        return;
+    }
+    
+    navItems.forEach(item => {
+        const questionId = item.dataset.id;
+        const hasData = window.userQuestionData && window.userQuestionData[questionId];
+        
+        if (confidenceLevel === '0') {
+            if (!hasData || !window.userQuestionData[questionId].confidence) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        } else {
+            if (hasData && window.userQuestionData[questionId].confidence === parseInt(confidenceLevel)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Set confidence level for a flashcard
+function setFlashcardConfidence(confidenceBtn) {
+    const container = confidenceBtn.closest('.confidence-rating');
+    container.querySelectorAll('.confidence-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    confidenceBtn.classList.add('selected');
+    const level = parseInt(confidenceBtn.dataset.level);
+    const currentQuestion = flashcardQuestions[currentFlashcardIndex];
+    
+    updateQuestionData(currentQuestion.id, 'confidence', level);
+    
+    // Update navigation item
+    const navItem = document.querySelector(`.question-nav-item[data-id="${currentQuestion.id}"]`);
+    if (navItem) {
+        navItem.classList.remove('confidence-1', 'confidence-2', 'confidence-3', 'confidence-4', 'confidence-5');
+        navItem.classList.add(`confidence-${level}`);
+    }
+    
+    // Update the question card in the main view
+    const card = document.querySelector(`.question-card[data-id="${currentQuestion.id}"]`);
+    if (card) {
+        const confidenceBtns = card.querySelectorAll('.confidence-btn');
+        confidenceBtns.forEach(btn => {
+            btn.classList.remove('selected');
+        });
+        
+        const btn = card.querySelector(`.confidence-btn[data-level="${level}"]`);
+        if (btn) {
+            btn.classList.add('selected');
+        }
+    }
+    
+    // Update spaced repetition data based on confidence level
+    updateSpacedRepetitionData(currentQuestion.id, 'confidence', level);
+    
+    saveProgress();
 }
